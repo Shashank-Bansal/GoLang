@@ -1,12 +1,18 @@
 package main
 
-import "fmt"
-// import LL "./Implementation/linkedList"
+import (
+	"fmt"
+	implementation "github.com/Shashank-Bansal/GoLang/Day05/Implementation"
+)
+
+// LL "github.com/Shashank-Bansal/GoLang/implementation"
+
 
 func main() {
 	fmt.Printf("\nCreating a new LinkedList...\n")
+	linkedList := new (implementation.LinkedList[float64])
 	// var linkedList LinkedList[float64]
-	var linkedList LL.LinkedList[float64]
+	// implementation.()
 
 	for true {
 		var choice int
@@ -37,9 +43,9 @@ func main() {
 				fmt.Println("Error reading input:", err)
 				continue
 			}
-			linkedList.add(element)
+			linkedList.Add(element)
 		} else if choice == 2 {
-			if linkedList.delete() {
+			if linkedList.Delete() {
 				fmt.Println("Deleted successfully")
 			} else {
 				fmt.Println("unable to delete")
@@ -52,9 +58,9 @@ func main() {
 				fmt.Println("Error reading input:", err)
 				continue
 			}
-			linkedList.addAtHead(element)
+			linkedList.AddAtHead(element)
 		} else if choice == 4 {
-			if linkedList.deleteAtHead() {
+			if linkedList.DeleteAtHead() {
 				fmt.Println("Deleted successfully")
 			} else {
 				fmt.Println("unable to delete")
@@ -69,7 +75,7 @@ func main() {
 				continue
 			}
 
-			if linkedList.insert(index, element) {
+			if linkedList.Insert(index, element) {
 				fmt.Printf("Element %v added successfully at index %v", element, index)
 			} else {
 				fmt.Printf("unable to add element %v at index %v because index is either negative number or greater than the length of linkedList", element, index)
@@ -83,7 +89,7 @@ func main() {
 				continue
 			}
 
-			if linkedList.deleteAtIndex(index) {
+			if linkedList.DeleteAtIndex(index) {
 				fmt.Printf("Node of index %v deleted successfully", index)
 			} else {
 				fmt.Printf("unable to delete node of index %v because index is either negative number or greater than the length of linkedList", index)
@@ -98,15 +104,15 @@ func main() {
 				continue
 			}
 
-			if linkedList.update(index, value) {
+			if linkedList.Update(index, value) {
 				fmt.Printf("Node updated successfully at index %v", index)
 			} else {
 				fmt.Printf("unable to update at index %v because index is either negative number or greater than the length of linkedList", index)
 			}
 		} else if choice == 8 {
-			linkedList.print()
+			linkedList.Print()
 		} else if choice == 9 {
-			fmt.Println("The length of linkedList is", linkedList.length)
+			fmt.Println("The length of linkedList is", linkedList.Length())
 		}
 	}
 }

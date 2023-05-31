@@ -2,7 +2,7 @@ package main
 
 import (
 	"math"
-	"strings"
+	// "strings"
 )
 
 func maxNumberOfBalloons(text string) int {
@@ -34,18 +34,18 @@ func maxNumberOfBalloons(text string) int {
 	// return secondMin
 }
 
-func createMap(s string) map[rune]int {
-	hm := make(map[rune]int)
+// func createMap(s string) map[rune]int {
+// 	hm := make(map[rune]int)
 
-	for _, e := range s {
-		if strings.ContainsRune(s, e) {
-			v := hm[e]
-			hm[e] = v + 1
-		}
-	}
+// 	for _, e := range s {
+// 		if strings.ContainsRune(s, e) {
+// 			v := hm[e]
+// 			hm[e] = v + 1
+// 		}
+// 	}
 
-	return hm
-}
+// 	return hm
+// }
 
 func minValue(a, b int) int {
 	if a < b {

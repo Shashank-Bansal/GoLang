@@ -13,13 +13,13 @@ func canConstruct(ransomNote string, magazine string) bool {
 	return true
 }
 
-func createMap(s string) map[rune]int {
-	hm := make(map[rune]int)
+// func createMap(s string) map[rune]int {
+// 	hm := make(map[rune]int)
 
-	for _, e := range s {
-		v := hm[e]
-		hm[e] = v + 1
-	}
+// 	for _, e := range s {
+// 		v := hm[e]
+// 		hm[e] = v + 1
+// 	}
 
-	return hm
-}
+// 	return hm
+// }
