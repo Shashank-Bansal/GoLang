@@ -41,7 +41,6 @@ type PersonalDetails struct {
 	AadhaarUID string `bson:"aadhaar_uid" json:"aadhaar_uid"`
 }
 
-
 func SetupRoutes() {
 	log.Println("Setting up routes...")
 	userIndexes()
@@ -123,9 +122,10 @@ func checkUser(w http.ResponseWriter, r *http.Request) {
 
 	var user User
 	// err = userCollection.FindOne(context.TODO(), bson.M{"personal_details.email": loginUser.Email, "pwd_hash": loginUser.Pwd_hash}).Decode(&user)
-	err = userCollection.FindOne(context.TODO(), bson.M{"personal_details.email": loginUser.Email).Decode(&user)
+	err = userCollection.FindOne(context.TODO(), bson.M{"personal_details.email": loginUser.Email}).Decode(&user)
 
 	if err != nil {
+		log.Println(err.Error())
 		if err == mongo.ErrNoDocuments {
 			http.Error(w, "Either email or password is incorrect", http.StatusBadRequest)
 		} else {
@@ -134,8 +134,9 @@ func checkUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword(user.Pwd_hash, loginUser.pwd_hash)
+	err = bcrypt.CompareHashAndPassword([]byte(user.Pwd_hash), []byte(loginUser.Pwd_hash))
 	if err != nil {
+		log.Println("bcrypt error: ", err.Error())
 		http.Error(w, "Either email or password is incorrect", http.StatusBadRequest)
 		return
 	}
@@ -158,17 +159,35 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cursor.Close(context.TODO())
 
-	var users []User // Assuming User is the struct representing a user document
+	var users []struct {
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		MobileNo  string `json:"mobile_no"`
+	}
 
 	for cursor.Next(context.TODO()) {
-		var user User
-		if err := cursor.Decode(&user); err != nil {
-			log.Println("Failed to decode user:", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		users = append(users, user)
-	}
+        var user struct {
+            PersonalDetails struct {
+                Email    string `bson:"email"`
+                Name     string `bson:"name"`
+                MobileNo string `bson:"mobile_no"`
+            } `bson:"personal_details"`
+        }
+        if err := cursor.Decode(&user); err != nil {
+            log.Println("Failed to decode user:", err)
+            w.WriteHeader(http.StatusInternalServerError)
+            return
+        }
+        users = append(users, struct {
+            Email     string `json:"email"`
+            Name      string `json:"name"`
+            MobileNo  string `json:"mobile_no"`
+        }{
+            Email:    user.PersonalDetails.Email,
+            Name:     user.PersonalDetails.Name,
+            MobileNo: user.PersonalDetails.MobileNo,
+        })
+    }
 
 	usersJSON, err := json.Marshal(users)
 	if err != nil {
@@ -196,15 +215,15 @@ func postUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pass := "Gurukuk1"
-	pass, err = bcrypt.GenerateFromPassword(pass, bcrypt.MinCost)
-    if err != nil {
-        log.Println(err)
+	pass := "Gurukul1"
+	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.MinCost)
+	if err != nil {
+		log.Println(err)
 		http.Error(w, "Failed to update user", http.StatusInternalServerError)
 		return
-    }
-	
-	newUser.Pwd_hash = string(pass)
+	}
+
+	newUser.Pwd_hash = string(passHash)
 
 	database := server.GetMongoInstance().Database
 	userCollection := database.Collection("users")
