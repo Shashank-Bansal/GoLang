@@ -14,37 +14,41 @@ import (
 	server "github.com/Shashank-Bansal/GoLang/Day07/Server"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	PersonalDetails PersonalDetails `bson:"personal_details"`
-	Residence       Residence       `bson:"residence"`
-	Pwd_hash        string          `bson:"pwd_hash"`
+	PersonalDetails PersonalDetails `bson:"personal_details" json:"personal_details"`
+	Residence       Residence       `bson:"residence" json:"residence"`
+	Pwd_hash        string          `bson:"pwd_hash" json:"pwd_hash"`
 }
 
 type Residence struct {
-	Address string `bson:"address"`
-	Pincode string `bson:"pincode"`
-	Country string `bson:"country"`
-	State   string `bson:"state"`
-	City    string `bson:"city"`
+	Address string `bson:"address" json:"address"`
+	Pincode string `bson:"pincode" json:"pincode"`
+	Country string `bson:"country" json:"country"`
+	State   string `bson:"state" json:"state"`
+	City    string `bson:"city" json:"city"`
 }
 
 type PersonalDetails struct {
-	Name       string `bson:"name"`
-	Email      string `bson:"email"`
-	MobileNo   string `bson:"mobile_no"`
-	DOB        string `bson:"dob"`
-	Gender     string `bson:"gender"`
-	BloodGrp   string `bson:"blood_grp"`
-	AadhaarUID string `bson:"aadhaar_uid"`
+	Name       string `bson:"name" json:"name"`
+	Email      string `bson:"email" json:"email"`
+	MobileNo   string `bson:"mobile_no" json:"mobile_no"`
+	DOB        string `bson:"dob" json:"dob"`
+	Gender     string `bson:"gender" json:"gender"`
+	BloodGrp   string `bson:"blood_grp" json:"blood_grp"`
+	AadhaarUID string `bson:"aadhaar_uid" json:"aadhaar_uid"`
 }
+
 
 func SetupRoutes() {
 	log.Println("Setting up routes...")
 	userIndexes()
 	loginRoute := chi.NewRouter()
+	loginRoute.Post("/admin", checkUser)
 	loginRoute.Get("/", getUser)
+	loginRoute.Patch("/", updateUser)
 	loginRoute.Post("/", postUser)
 	loginRoute.Delete("/", deleteUser)
 
@@ -61,6 +65,85 @@ func userIndexes() {
 	database := server.GetMongoInstance().Database
 	userCollection := database.Collection("users")
 	userCollection.Indexes().CreateOne(context.TODO(), indexModel)
+}
+
+func updateUser(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var updatedFields map[string]interface{}
+	err = json.Unmarshal(body, &updatedFields)
+	if err != nil {
+		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	database := server.GetMongoInstance().Database
+	userCollection := database.Collection("users")
+
+	var email = updatedFields["email"]
+
+	log.Println(email)
+	result := userCollection.FindOneAndUpdate(context.TODO(), bson.M{"personal_details.email": email}, bson.M{"$set": updatedFields})
+	if result.Err() != nil {
+		log.Println(result.Err())
+		log.Println(updatedFields)
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("user updated successfully"))
+}
+
+func checkUser(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return
+	}
+
+	var loginUser struct {
+		Email    string `json:"email"`
+		Pwd_hash string `json:"pwd"`
+	}
+
+	err = json.Unmarshal(body, &loginUser)
+	if err != nil {
+		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	log.Println(loginUser)
+	database := server.GetMongoInstance().Database
+	userCollection := database.Collection("users")
+
+	var user User
+	// err = userCollection.FindOne(context.TODO(), bson.M{"personal_details.email": loginUser.Email, "pwd_hash": loginUser.Pwd_hash}).Decode(&user)
+	err = userCollection.FindOne(context.TODO(), bson.M{"personal_details.email": loginUser.Email).Decode(&user)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "Either email or password is incorrect", http.StatusBadRequest)
+		} else {
+			http.Error(w, "Failed to find user", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword(user.Pwd_hash, loginUser.pwd_hash)
+	if err != nil {
+		http.Error(w, "Either email or password is incorrect", http.StatusBadRequest)
+		return
+	}
+	userJSON, _ := json.Marshal(user)
+	log.Println(userJSON, user)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(userJSON))
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) {
@@ -112,6 +195,16 @@ func postUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
 		return
 	}
+
+	pass := "Gurukuk1"
+	pass, err = bcrypt.GenerateFromPassword(pass, bcrypt.MinCost)
+    if err != nil {
+        log.Println(err)
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		return
+    }
+	
+	newUser.Pwd_hash = string(pass)
 
 	database := server.GetMongoInstance().Database
 	userCollection := database.Collection("users")
